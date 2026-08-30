@@ -1,0 +1,8 @@
+{
+  "name": "Options Lab — Option P&L Calculator",
+  "description": "Educational options calculator using Black-Scholes pricing. Explore P&L at expiration, theoretical Greeks, and Delta Exposure & Leverage (Omega) across strikes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

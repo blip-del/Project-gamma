@@ -31,234 +31,394 @@
       </svg>
       <span>Options <strong>Lab</strong></span>
     </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" id="mainNavTabs" role="tablist">
+      <button class="nav-tab-btn active" id="tabPnlExplorer" role="tab" aria-selected="true" onclick="switchTab('pnl-explorer')">
+        <span class="tab-icon">📊</span> Option P&amp;L Explorer
+      </button>
+      <button class="nav-tab-btn" id="tabExposureVisualizer" role="tab" aria-selected="false" onclick="switchTab('exposure-visualizer')">
+        <span class="tab-icon">⚡</span> Delta Exposure &amp; Leverage
+      </button>
+    </nav>
+
     <div class="header-badge">Educational Tool · Black-Scholes Model</div>
   </header>
 
   <main class="main-container">
-    <section class="hero">
-      <h1>Option <span class="gradient-text">P&L Explorer</span></h1>
-      <p class="hero-sub">Enter your market parameters, load a preset, and explore theoretical P&L across strikes at expiration.</p>
-    </section>
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- VIEW 1: OPTION P&L EXPLORER (EXISTING VIEW)            -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div id="viewPnlExplorer" class="tab-view active">
+      <section class="hero">
+        <h1>Option <span class="gradient-text">P&L Explorer</span></h1>
+        <p class="hero-sub">Enter your market parameters, load a preset, and explore theoretical P&L across strikes at expiration.</p>
+      </section>
 
-    <!-- ── PRESETS PANEL ─────────────────────────────────── -->
-    <section class="presets-panel glass-card" id="presetsPanel">
-      <div class="presets-header" onclick="togglePresets()" role="button" tabindex="0">
-        <h2 class="section-title" style="margin-bottom:0">Presets &amp; Configurations</h2>
-        <span class="presets-chevron" id="presetsChevron">▼</span>
-      </div>
-      <div class="presets-body" id="presetsBody">
-        <div class="presets-chips" id="presetsRow"><!-- rendered by JS --></div>
-        <div class="presets-save-row">
-          <div class="input-wrapper presets-name-wrapper">
-            <input type="text" id="presetName" placeholder="Name your configuration…" class="preset-name-input"
-                   onkeydown="if(event.key==='Enter') savePreset()" />
-          </div>
-          <button class="preset-save-btn" onclick="savePreset()">💾 Save Current</button>
+      <!-- ── PRESETS PANEL ─────────────────────────────────── -->
+      <section class="presets-panel glass-card" id="presetsPanel">
+        <div class="presets-header" onclick="togglePresets()" role="button" tabindex="0">
+          <h2 class="section-title" style="margin-bottom:0">Presets &amp; Configurations</h2>
+          <span class="presets-chevron" id="presetsChevron">▼</span>
         </div>
-      </div>
-    </section>
-
-    <!-- ── INPUTS PANEL ──────────────────────────────────── -->
-    <section class="inputs-panel glass-card">
-      <h2 class="section-title">Market Parameters</h2>
-      <div class="inputs-grid">
-
-        <!-- Stock Price -->
-        <div class="input-group">
-          <label for="stockPrice">Stock Price (S)</label>
-          <div class="input-wrapper">
-            <span class="input-prefix">$</span>
-            <input type="number" id="stockPrice" value="100" min="0.01" step="0.01"
-                   oninput="onStockPriceInput()" />
+        <div class="presets-body" id="presetsBody">
+          <div class="presets-chips" id="presetsRow"><!-- rendered by JS --></div>
+          <div class="presets-save-row">
+            <div class="input-wrapper presets-name-wrapper">
+              <input type="text" id="presetName" placeholder="Name your configuration…" class="preset-name-input"
+                     onkeydown="if(event.key==='Enter') savePreset()" />
+            </div>
+            <button class="preset-save-btn" onclick="savePreset()">💾 Save Current</button>
           </div>
-          <input type="range" class="slider" id="sliderStockPrice"
-                 min="50" max="150" step="1" value="100"
-                 oninput="onStockSlider()" />
-          <span class="input-hint">Current price · slider ±50% of typed value</span>
         </div>
+      </section>
 
-        <!-- Expiration Date -->
-        <div class="input-group">
-          <label for="expiryDate">Expiration Date</label>
-          <div class="input-wrapper">
-            <span class="input-prefix">📅</span>
-            <input type="date" id="expiryDate"
-                   onchange="onExpiryDateInput()" />
-          </div>
-          <input type="range" class="slider" id="sliderWeeks"
-                 min="1" max="52" step="1" value="4"
-                 oninput="onWeeksSlider()" />
-          <span class="input-hint" id="daysHint">— days to expiry · slider = weeks (1–52)</span>
-        </div>
+      <!-- ── INPUTS PANEL ──────────────────────────────────── -->
+      <section class="inputs-panel glass-card">
+        <h2 class="section-title">Market Parameters</h2>
+        <div class="inputs-grid">
 
-        <!-- IV -->
-        <div class="input-group">
-          <label for="iv">Implied Volatility (IV)</label>
-          <div class="input-wrapper">
-            <input type="number" id="iv" value="30" min="1" max="500" step="0.5"
-                   oninput="clampSlider('iv','sliderIV')" />
-            <span class="input-suffix">%</span>
+          <!-- Stock Price -->
+          <div class="input-group">
+            <label for="stockPrice">Stock Price (S)</label>
+            <div class="input-wrapper">
+              <span class="input-prefix">$</span>
+              <input type="number" id="stockPrice" value="100" min="0.01" step="0.01"
+                     oninput="onStockPriceInput()" />
+            </div>
+            <input type="range" class="slider" id="sliderStockPrice"
+                   min="50" max="150" step="1" value="100"
+                   oninput="onStockSlider()" />
+            <span class="input-hint">Current price · slider ±50% of typed value</span>
           </div>
-          <input type="range" class="slider" id="sliderIV"
-                 min="1" max="200" step="10" value="30"
-                 oninput="document.getElementById('iv').value=this.value" />
-          <span class="input-hint">Annual volatility · slider 1–200%, step 10%</span>
-        </div>
 
-        <!-- Risk-free rate -->
-        <div class="input-group">
-          <label for="riskFreeRate">Risk-Free Rate (r)</label>
-          <div class="input-wrapper">
-            <input type="number" id="riskFreeRate" value="5" min="0" max="50" step="0.1"
-                   oninput="clampSlider('riskFreeRate','sliderRiskFree')" />
-            <span class="input-suffix">%</span>
+          <!-- Expiration Date -->
+          <div class="input-group">
+            <label for="expiryDate">Expiration Date</label>
+            <div class="input-wrapper">
+              <span class="input-prefix">📅</span>
+              <input type="date" id="expiryDate"
+                     onchange="onExpiryDateInput()" />
+            </div>
+            <input type="range" class="slider" id="sliderWeeks"
+                   min="1" max="52" step="1" value="4"
+                   oninput="onWeeksSlider()" />
+            <span class="input-hint" id="daysHint">— days to expiry · slider = weeks (1–52)</span>
           </div>
-          <input type="range" class="slider" id="sliderRiskFree"
-                 min="0" max="10" step="1" value="5"
-                 oninput="document.getElementById('riskFreeRate').value=this.value" />
-          <span class="input-hint">Annual rate · slider 0–10%, step 1%</span>
-        </div>
 
-        <!-- Number of Strikes -->
-        <div class="input-group">
-          <label for="numStrikes">Number of Strikes</label>
-          <div class="input-wrapper">
-            <input type="number" id="numStrikes" value="6" min="2" max="20" step="1"
-                   oninput="clampSlider('numStrikes','sliderNumStrikes')" />
+          <!-- IV -->
+          <div class="input-group">
+            <label for="iv">Implied Volatility (IV)</label>
+            <div class="input-wrapper">
+              <input type="number" id="iv" value="30" min="1" max="500" step="0.5"
+                     oninput="clampSlider('iv','sliderIV')" />
+              <span class="input-suffix">%</span>
+            </div>
+            <input type="range" class="slider" id="sliderIV"
+                   min="1" max="200" step="10" value="30"
+                   oninput="document.getElementById('iv').value=this.value" />
+            <span class="input-hint">Annual volatility · slider 1–200%, step 10%</span>
           </div>
-          <input type="range" class="slider" id="sliderNumStrikes"
-                 min="2" max="10" step="1" value="6"
-                 oninput="document.getElementById('numStrikes').value=this.value" />
-          <span class="input-hint">Per-side when ITM/OTM filtered · slider 2–10</span>
-        </div>
 
-        <!-- Strike Step -->
-        <div class="input-group">
-          <label for="strikeStep">Strike Step ($)</label>
-          <div class="input-wrapper">
-            <span class="input-prefix">$</span>
-            <input type="number" id="strikeStep" value="5" min="0.5" step="0.5"
-                   oninput="clampSlider('strikeStep','sliderStrikeStep')" />
+          <!-- Risk-free rate -->
+          <div class="input-group">
+            <label for="riskFreeRate">Risk-Free Rate (r)</label>
+            <div class="input-wrapper">
+              <input type="number" id="riskFreeRate" value="5" min="0" max="50" step="0.1"
+                     oninput="clampSlider('riskFreeRate','sliderRiskFree')" />
+              <span class="input-suffix">%</span>
+            </div>
+            <input type="range" class="slider" id="sliderRiskFree"
+                   min="0" max="10" step="1" value="5"
+                   oninput="document.getElementById('riskFreeRate').value=this.value" />
+            <span class="input-hint">Annual rate · slider 0–10%, step 1%</span>
           </div>
-          <input type="range" class="slider" id="sliderStrikeStep"
-                 min="0.5" max="10" step="0.5" value="5"
-                 oninput="document.getElementById('strikeStep').value=this.value" />
-          <span class="input-hint">Distance between strikes · slider 0.5–10</span>
-        </div>
 
-        <!-- Spot Step -->
-        <div class="input-group">
-          <label for="spotStep">Spot Step ($)</label>
-          <div class="input-wrapper">
-            <span class="input-prefix">$</span>
-            <input type="number" id="spotStep" placeholder="auto" min="0.5" step="0.5"
-                   oninput="clampSlider('spotStep','sliderSpotStep')" />
+          <!-- Number of Strikes -->
+          <div class="input-group">
+            <label for="numStrikes">Number of Strikes</label>
+            <div class="input-wrapper">
+              <input type="number" id="numStrikes" value="6" min="2" max="20" step="1"
+                     oninput="clampSlider('numStrikes','sliderNumStrikes')" />
+            </div>
+            <input type="range" class="slider" id="sliderNumStrikes"
+                   min="2" max="10" step="1" value="6"
+                   oninput="document.getElementById('numStrikes').value=this.value" />
+            <span class="input-hint">Per-side when ITM/OTM filtered · slider 2–10</span>
           </div>
-          <div class="slider-auto-row">
-            <input type="range" class="slider slider-flex" id="sliderSpotStep"
+
+          <!-- Strike Step -->
+          <div class="input-group">
+            <label for="strikeStep">Strike Step ($)</label>
+            <div class="input-wrapper">
+              <span class="input-prefix">$</span>
+              <input type="number" id="strikeStep" value="5" min="0.5" step="0.5"
+                     oninput="clampSlider('strikeStep','sliderStrikeStep')" />
+            </div>
+            <input type="range" class="slider" id="sliderStrikeStep"
                    min="0.5" max="10" step="0.5" value="5"
-                   oninput="document.getElementById('spotStep').value=this.value" />
-            <button class="auto-btn" onclick="clearSpotStep()">auto</button>
+                   oninput="document.getElementById('strikeStep').value=this.value" />
+            <span class="input-hint">Distance between strikes · slider 0.5–10</span>
           </div>
-          <span class="input-hint">P&L column spacing · blank = auto</span>
-        </div>
 
-        <!-- Spot Range -->
-        <div class="input-group">
-          <label for="spotRangePct">Spot Range (%)</label>
-          <div class="input-wrapper">
-            <input type="number" id="spotRangePct" value="20" min="1" max="500" step="1"
-                   oninput="clampSlider('spotRangePct','sliderSpotRange')" />
-            <span class="input-suffix">%</span>
+          <!-- Spot Step -->
+          <div class="input-group">
+            <label for="spotStep">Spot Step ($)</label>
+            <div class="input-wrapper">
+              <span class="input-prefix">$</span>
+              <input type="number" id="spotStep" placeholder="auto" min="0.5" step="0.5"
+                     oninput="clampSlider('spotStep','sliderSpotStep')" />
+            </div>
+            <div class="slider-auto-row">
+              <input type="range" class="slider slider-flex" id="sliderSpotStep"
+                     min="0.5" max="10" step="0.5" value="5"
+                     oninput="document.getElementById('spotStep').value=this.value" />
+              <button class="auto-btn" onclick="clearSpotStep()">auto</button>
+            </div>
+            <span class="input-hint">P&L column spacing · blank = auto</span>
           </div>
-          <input type="range" class="slider" id="sliderSpotRange"
-                 min="5" max="200" step="5" value="20"
-                 oninput="document.getElementById('spotRangePct').value=this.value" />
-          <span class="input-hint">±% from current price in P&L grid · slider 5–200%</span>
-        </div>
 
-      </div><!-- /inputs-grid -->
-
-      <!-- Option Type -->
-      <div class="premium-input-group">
-        <label>Option Type</label>
-        <div class="premium-toggle-row">
-          <div class="toggle-group">
-            <button class="toggle-btn active" id="btnCalls" onclick="setOptionType('calls')">Calls</button>
-            <button class="toggle-btn"        id="btnPuts"  onclick="setOptionType('puts')">Puts</button>
-            <button class="toggle-btn"        id="btnBoth"  onclick="setOptionType('both')">Both</button>
+          <!-- Spot Range -->
+          <div class="input-group">
+            <label for="spotRangePct">Spot Range (%)</label>
+            <div class="input-wrapper">
+              <input type="number" id="spotRangePct" value="20" min="1" max="500" step="1"
+                     oninput="clampSlider('spotRangePct','sliderSpotRange')" />
+              <span class="input-suffix">%</span>
+            </div>
+            <input type="range" class="slider" id="sliderSpotRange"
+                   min="5" max="200" step="5" value="20"
+                   oninput="document.getElementById('spotRangePct').value=this.value" />
+            <span class="input-hint">±% from current price in P&L grid · slider 5–200%</span>
           </div>
-          <span class="input-hint">Which options to calculate</span>
-        </div>
-      </div>
 
-      <!-- Moneyness Filter -->
-      <div class="premium-input-group">
-        <label>Moneyness Filter</label>
-        <div class="premium-toggle-row">
-          <div class="toggle-group">
-            <button class="toggle-btn active" id="btnAll" onclick="setMoneynessFilter('all')">All</button>
-            <button class="toggle-btn"        id="btnITM" onclick="setMoneynessFilter('itm')">ITM only</button>
-            <button class="toggle-btn"        id="btnOTM" onclick="setMoneynessFilter('otm')">OTM only</button>
-          </div>
-          <span class="input-hint">Filters strikes in both the table &amp; P&L grid</span>
-        </div>
-      </div>
+        </div><!-- /inputs-grid -->
 
-      <!-- Option Premium -->
-      <div class="premium-input-group">
-        <label>Option Premium</label>
-        <div class="premium-toggle-row">
-          <div class="toggle-group">
-            <button class="toggle-btn active" id="btnTheoretical" onclick="setPremiumMode('theoretical')">Theoretical (B-S)</button>
-            <button class="toggle-btn"        id="btnManual"      onclick="setPremiumMode('manual')">Manual per Strike</button>
-          </div>
-          <span class="input-hint">How premiums are set</span>
-        </div>
-      </div>
-
-      <button class="calculate-btn" id="calculateBtn" onclick="calculate()">
-        <span class="btn-icon">⚡</span>
-        Calculate
-      </button>
-    </section>
-
-    <!-- ── GREEKS SUMMARY ────────────────────────────────── -->
-    <section class="greeks-bar glass-card" id="greeksBar" style="display:none">
-      <h2 class="section-title">ATM Strike Summary</h2>
-      <div class="greeks-grid" id="greeksGrid"></div>
-    </section>
-
-    <!-- ── STRIKES TABLE ─────────────────────────────────── -->
-    <section class="strikes-section glass-card" id="strikesSection" style="display:none">
-      <h2 class="section-title">Generated Strikes &amp; Theoretical Prices</h2>
-      <div class="table-scroll">
-        <table class="strikes-table" id="strikesTable">
-          <thead><tr></tr></thead>
-          <tbody id="strikesBody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ── P&L GRID ──────────────────────────────────────── -->
-    <section class="pnl-section glass-card" id="pnlSection" style="display:none">
-      <div class="pnl-header-row">
-        <h2 class="section-title">P&L at Expiration Grid</h2>
-        <div class="pnl-controls">
-          <div class="toggle-group">
-            <button class="toggle-btn toggle-btn-sm active" id="btnFlat" onclick="setPnlMode('flat')">$ Amount</button>
-            <button class="toggle-btn toggle-btn-sm"        id="btnPct"  onclick="setPnlMode('pct')">% Return</button>
+        <!-- Option Type -->
+        <div class="premium-input-group">
+          <label>Option Type</label>
+          <div class="premium-toggle-row">
+            <div class="toggle-group">
+              <button class="toggle-btn active" id="btnCalls" onclick="setOptionType('calls')">Calls</button>
+              <button class="toggle-btn"        id="btnPuts"  onclick="setOptionType('puts')">Puts</button>
+              <button class="toggle-btn"        id="btnBoth"  onclick="setOptionType('both')">Both</button>
+            </div>
+            <span class="input-hint">Which options to calculate</span>
           </div>
         </div>
-        <div class="legend">
-          <span class="legend-dot profit"></span> Profit
-          <span class="legend-dot loss"></span> Loss
-          <span class="legend-dot breakeven"></span> Near B/E
+
+        <!-- Moneyness Filter -->
+        <div class="premium-input-group">
+          <label>Moneyness Filter</label>
+          <div class="premium-toggle-row">
+            <div class="toggle-group">
+              <button class="toggle-btn active" id="btnAll" onclick="setMoneynessFilter('all')">All</button>
+              <button class="toggle-btn"        id="btnITM" onclick="setMoneynessFilter('itm')">ITM only</button>
+              <button class="toggle-btn"        id="btnOTM" onclick="setMoneynessFilter('otm')">OTM only</button>
+            </div>
+            <span class="input-hint">Filters strikes in both the table &amp; P&L grid</span>
+          </div>
         </div>
-      </div>
-      <p class="pnl-desc">Each cell = net P&L for <strong>1 contract (100 shares)</strong> bought at that strike if the stock closes at the column price at expiration.</p>
-      <div id="pnlGridContainer"></div>
-    </section>
+
+        <!-- Option Premium -->
+        <div class="premium-input-group">
+          <label>Option Premium</label>
+          <div class="premium-toggle-row">
+            <div class="toggle-group">
+              <button class="toggle-btn active" id="btnTheoretical" onclick="setPremiumMode('theoretical')">Theoretical (B-S)</button>
+              <button class="toggle-btn"        id="btnManual"      onclick="setPremiumMode('manual')">Manual per Strike</button>
+            </div>
+            <span class="input-hint">How premiums are set</span>
+          </div>
+        </div>
+
+        <button class="calculate-btn" id="calculateBtn" onclick="calculate()">
+          <span class="btn-icon">⚡</span>
+          Calculate
+        </button>
+      </section>
+
+      <!-- ── GREEKS SUMMARY ────────────────────────────────── -->
+      <section class="greeks-bar glass-card" id="greeksBar" style="display:none">
+        <h2 class="section-title">ATM Strike Summary</h2>
+        <div class="greeks-grid" id="greeksGrid"></div>
+      </section>
+
+      <!-- ── STRIKES TABLE ─────────────────────────────────── -->
+      <section class="strikes-section glass-card" id="strikesSection" style="display:none">
+        <h2 class="section-title">Generated Strikes &amp; Theoretical Prices</h2>
+        <div class="table-scroll">
+          <table class="strikes-table" id="strikesTable">
+            <thead><tr></tr></thead>
+            <tbody id="strikesBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── P&L GRID ──────────────────────────────────────── -->
+      <section class="pnl-section glass-card" id="pnlSection" style="display:none">
+        <div class="pnl-header-row">
+          <h2 class="section-title">P&L at Expiration Grid</h2>
+          <div class="pnl-controls">
+            <div class="toggle-group">
+              <button class="toggle-btn toggle-btn-sm active" id="btnFlat" onclick="setPnlMode('flat')">$ Amount</button>
+              <button class="toggle-btn toggle-btn-sm"        id="btnPct"  onclick="setPnlMode('pct')">% Return</button>
+            </div>
+          </div>
+          <div class="legend">
+            <span class="legend-dot profit"></span> Profit
+            <span class="legend-dot loss"></span> Loss
+            <span class="legend-dot breakeven"></span> Near B/E
+          </div>
+        </div>
+        <p class="pnl-desc">Each cell = net P&L for <strong>1 contract (100 shares)</strong> bought at that strike if the stock closes at the column price at expiration.</p>
+        <div id="pnlGridContainer"></div>
+      </section>
+    </div><!-- /#viewPnlExplorer -->
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- VIEW 2: DELTA EXPOSURE & LEVERAGE VISUALIZER           -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div id="viewExposureVisualizer" class="tab-view" style="display:none;">
+      <section class="exposure-visualizer-container" id="exposureContainer">
+        
+        <!-- Header title matching Example.png -->
+        <div class="exposure-title-area">
+          <h1 class="exposure-main-title">Options Leverage &amp; Elasticity Visualizer</h1>
+          <p class="exposure-main-sub">Analyze theoretical Delta, contract positioning for your capital, notional exposure, and effective leverage (Omega) across strikes.</p>
+        </div>
+
+        <!-- Visualizer Visual Card (Chart) -->
+        <div class="exposure-chart-card glass-card">
+          <div class="chart-legend-header">
+            <div class="legend-item blue-legend">
+              <span class="legend-swatch blue-swatch"></span>
+              <span class="legend-text">Delta (|Δ|)</span>
+            </div>
+            <div class="legend-item green-legend">
+              <span class="legend-swatch green-swatch"></span>
+              <span class="legend-text">Omega (Leverage)</span>
+            </div>
+          </div>
+
+          <div class="chart-inner-area" id="chartInnerArea">
+            <div class="chart-y-axis-title">Value / Ratio ↑</div>
+            <div class="chart-svg-box" id="exposureChartBox">
+              <!-- SVG dynamically rendered here -->
+            </div>
+            <div class="chart-x-axis-title">Strike Price ($) →</div>
+          </div>
+        </div>
+
+        <!-- Strike Breakdown Table matching Example.png -->
+        <div class="exposure-table-card glass-card">
+          <div class="table-scroll">
+            <table class="exposure-breakdown-table" id="exposureBreakdownTable">
+              <thead>
+                <tr>
+                  <th>Strike ($)</th>
+                  <th>Type</th>
+                  <th>Opt. Price</th>
+                  <th>Delta</th>
+                  <th id="colHeaderContracts">Contracts ($1k)</th>
+                  <th>Notional Exp.</th>
+                  <th>Eff. Leverage</th>
+                </tr>
+              </thead>
+              <tbody id="exposureTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Key Highlight Badges (ATM Delta & ATM Omega) -->
+        <div class="exposure-highlights-card glass-card">
+          <div class="highlight-item">
+            <div class="highlight-label">ATM DELTA</div>
+            <div class="highlight-val" id="dispAtmDelta">0.55</div>
+          </div>
+          <div class="highlight-separator"></div>
+          <div class="highlight-item">
+            <div class="highlight-label">ATM OMEGA (LEVERAGE)</div>
+            <div class="highlight-val" id="dispAtmOmega">10.5x</div>
+          </div>
+        </div>
+
+        <!-- Manual Parameter Controls & Sliders matching Example.png -->
+        <div class="exposure-controls-card glass-card">
+          <div class="exposure-controls-grid">
+
+            <!-- Investment Amount ($) -->
+            <div class="exp-control-row">
+              <label class="exp-control-name" for="expInvestment">Investment ($)</label>
+              <div class="exp-slider-wrap">
+                <input type="range" class="slider exp-slider" id="sliderExpInvestment"
+                       min="100" max="25000" step="100" value="1000"
+                       oninput="onExpInvestmentSlider(this.value)" />
+              </div>
+              <div class="exp-value-pill">
+                <input type="number" id="expInvestment" value="1000" min="10" step="100"
+                       oninput="onExpInvestmentInput(this.value)" />
+              </div>
+            </div>
+
+            <!-- Stock Price (S) -->
+            <div class="exp-control-row">
+              <label class="exp-control-name" for="expStockPrice">Stock Price</label>
+              <div class="exp-slider-wrap">
+                <input type="range" class="slider exp-slider" id="sliderExpStockPrice"
+                       min="10" max="300" step="1" value="100"
+                       oninput="onExpStockSlider(this.value)" />
+              </div>
+              <div class="exp-value-pill">
+                <input type="number" id="expStockPrice" value="100" min="0.01" step="1"
+                       oninput="onExpStockInput(this.value)" />
+              </div>
+            </div>
+
+            <!-- DTE -->
+            <div class="exp-control-row">
+              <label class="exp-control-name" for="expDte">DTE</label>
+              <div class="exp-slider-wrap">
+                <input type="range" class="slider exp-slider" id="sliderExpDte"
+                       min="1" max="365" step="1" value="60"
+                       oninput="onExpDteSlider(this.value)" />
+              </div>
+              <div class="exp-value-pill">
+                <input type="number" id="expDte" value="60" min="1" max="730" step="1"
+                       oninput="onExpDteInput(this.value)" />
+              </div>
+            </div>
+
+            <!-- IV -->
+            <div class="exp-control-row">
+              <label class="exp-control-name" for="expIv">IV</label>
+              <div class="exp-slider-wrap">
+                <input type="range" class="slider exp-slider" id="sliderExpIv"
+                       min="0.05" max="2.00" step="0.01" value="0.30"
+                       oninput="onExpIvSlider(this.value)" />
+              </div>
+              <div class="exp-value-pill">
+                <input type="number" id="expIv" value="0.30" min="0.01" max="5.0" step="0.01"
+                       oninput="onExpIvInput(this.value)" />
+              </div>
+            </div>
+
+            <!-- Option Type (Call / Put) -->
+            <div class="exp-control-row exp-type-row">
+              <label class="exp-control-name">Option Type</label>
+              <div class="exp-type-pill-group">
+                <button type="button" class="exp-type-toggle-btn active" id="expBtnCall" onclick="setExpOptionType('calls')">Call</button>
+                <button type="button" class="exp-type-toggle-btn" id="expBtnPut" onclick="setExpOptionType('puts')">Put</button>
+              </div>
+            </div>
+
+          </div><!-- /.exposure-controls-grid -->
+        </div><!-- /.exposure-controls-card -->
+
+      </section><!-- /#exposureContainer -->
+    </div><!-- /#viewExposureVisualizer -->
 
     <!-- ── DISCLAIMER ────────────────────────────────────── -->
     <div class="disclaimer">

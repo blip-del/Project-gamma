@@ -836,3 +836,405 @@ tbody td {
   color: white;
 }
 
+/* ===========================
+   Navigation Tabs
+   =========================== */
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px 6px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+}
+.nav-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.nav-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+.nav-tab-btn.active {
+  background: rgba(124, 58, 237, 0.22);
+  border-color: rgba(124, 58, 237, 0.5);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.25);
+}
+.nav-tab-btn .tab-icon {
+  font-size: 0.95rem;
+}
+
+.tab-view {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===========================
+   Exposure & Leverage Visualizer View
+   =========================== */
+.exposure-visualizer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.exposure-title-area {
+  padding: 8px 4px 4px;
+}
+.exposure-main-title {
+  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.exposure-main-sub {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  max-width: 720px;
+}
+
+/* Chart Card & Layout */
+.exposure-chart-card {
+  padding: 24px 28px 28px;
+}
+.chart-legend-header {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-bottom: 16px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.blue-swatch {
+  background-color: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+.green-swatch {
+  background-color: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+}
+
+.chart-inner-area {
+  position: relative;
+  width: 100%;
+}
+.chart-y-axis-title {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.chart-x-axis-title {
+  text-align: right;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  padding-right: 12px;
+}
+.chart-svg-box {
+  width: 100%;
+  height: 320px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  position: relative;
+}
+.chart-svg-box svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Tooltip for chart */
+.chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(15, 15, 25, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  z-index: 50;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
+}
+.chart-tooltip .tt-title {
+  font-weight: 600;
+  color: var(--purple-light);
+  margin-bottom: 4px;
+}
+.chart-tooltip .tt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  line-height: 1.4;
+}
+
+/* Exposure Table */
+.exposure-table-card {
+  padding: 20px 24px;
+}
+.exposure-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.exposure-breakdown-table th {
+  text-align: left;
+  padding: 12px 14px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.exposure-breakdown-table td {
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.exposure-breakdown-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+.exposure-breakdown-table tr.atm-row td {
+  background: rgba(124, 58, 237, 0.08);
+}
+.exposure-breakdown-table tr.atm-row td:first-child {
+  border-left: 3px solid var(--cyan);
+}
+
+/* Moneyness Badges in Exposure Table */
+.exp-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.exp-badge.badge-itm {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.exp-badge.badge-atm {
+  color: #a78bfa;
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.35);
+}
+.exp-badge.badge-otm {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* Key Highlights Card (ATM Delta & ATM Omega) */
+.exposure-highlights-card {
+  padding: 24px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+}
+.highlight-item {
+  text-align: center;
+  flex: 1;
+  max-width: 320px;
+}
+.highlight-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+.highlight-val {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+.highlight-separator {
+  width: 1px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Controls Card & Sliders */
+.exposure-controls-card {
+  padding: 28px 32px;
+}
+.exposure-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px 36px;
+  align-items: center;
+}
+.exp-control-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.exp-control-name {
+  width: 95px;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.exp-slider-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.exp-slider {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.exp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 22px;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s ease;
+}
+.exp-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.exp-value-pill {
+  min-width: 72px;
+  height: 40px;
+  padding: 0 6px;
+  flex-shrink: 0;
+  background: rgba(18, 18, 26, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+.exp-value-pill input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.exp-value-pill input::-webkit-outer-spin-button,
+.exp-value-pill input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Option Type Toggle in Exposure Controls */
+.exp-type-row {
+  justify-content: flex-start;
+}
+.exp-type-pill-group {
+  display: flex;
+  background: rgba(18, 18, 26, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 2px;
+}
+.exp-type-toggle-btn {
+  padding: 8px 24px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.exp-type-toggle-btn.active {
+  background: #1e293b;
+  border-color: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+}
+
+@media (max-width: 768px) {
+  .site-header {
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px 20px;
+  }
+  .exposure-highlights-card {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .highlight-separator {
+    width: 60%;
+    height: 1px;
+  }
+  .exp-control-row {
+    flex-wrap: wrap;
+  }
+}
+
+

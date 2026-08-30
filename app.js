@@ -309,6 +309,35 @@ function blackScholesPut(S, K, T, r, σ) {
   };
 }
 
+/**
+ * Pure Black-Scholes option metrics getter.
+ * Modular and easily called by scenario engines & future P&L simulators.
+ */
+function getOptionMetrics(S, K, T, r, σ, type = 'calls') {
+  const isPut = type === 'puts' || type === 'put';
+  return isPut ? blackScholesPut(S, K, T, r, σ) : blackScholesCall(S, K, T, r, σ);
+}
+
+/**
+ * Pure Exposure & Leverage math calculation.
+ * Decoupled from getOptionMetrics to cleanly support future shifted inputs / P&L simulators.
+ */
+function calculateExposureMetrics({ investment, stockPrice, strike, optPrice, delta, optionType }) {
+  const contractCost = optPrice * 100;
+  const contracts = contractCost > 0 ? investment / contractCost : 0;
+  const notionalExposure = contracts * 100 * stockPrice;
+  const effectiveLeverage = optPrice > 0 ? (Math.abs(delta) * stockPrice) / optPrice : 0;
+  const deltaAdjustedExposure = notionalExposure * Math.abs(delta);
+
+  return {
+    contracts,
+    notionalExposure,
+    effectiveLeverage,
+    deltaAdjustedExposure,
+    contractCost,
+  };
+}
+
 // ─── Moneyness helpers ────────────────────────────────────────
 function moneynessLabel(S, K) {
   const pct = (S - K) / K * 100;
@@ -670,5 +699,557 @@ function pnlCellClass(pnl, maxAbs) {
 
 // Enter key shortcut
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !['BUTTON','INPUT'].includes(e.target.tagName)) calculate();
+  if (e.key === 'Enter' && !['BUTTON','INPUT'].includes(e.target.tagName)) {
+    const pnlView = document.getElementById('viewPnlExplorer');
+    if (pnlView && pnlView.style.display !== 'none') {
+      calculate();
+    }
+  }
 });
+
+/* ============================================================
+   Delta Exposure & Leverage Visualizer — Modular Engine
+   ============================================================ */
+
+// ─── Exposure State (Independent from P&L Explorer) ──────────
+const expState = {
+  investment: 1000,
+  stockPrice: 100,
+  dte: 60,
+  iv: 0.30,
+  r: 0.05,
+  optionType: 'calls', // 'calls' | 'puts'
+};
+
+// ─── Tab Switcher ─────────────────────────────────────────────
+function switchTab(tabId) {
+  const pnlView = document.getElementById('viewPnlExplorer');
+  const expView = document.getElementById('viewExposureVisualizer');
+  const pnlTabBtn = document.getElementById('tabPnlExplorer');
+  const expTabBtn = document.getElementById('tabExposureVisualizer');
+
+  if (tabId === 'exposure-visualizer') {
+    if (pnlView) pnlView.style.display = 'none';
+    if (expView) {
+      expView.style.display = 'flex';
+    }
+    pnlTabBtn?.classList.remove('active');
+    expTabBtn?.classList.add('active');
+    pnlTabBtn?.setAttribute('aria-selected', 'false');
+    expTabBtn?.setAttribute('aria-selected', 'true');
+    renderExposureVisualizer();
+  } else {
+    if (pnlView) pnlView.style.display = 'flex';
+    if (expView) expView.style.display = 'none';
+    pnlTabBtn?.classList.add('active');
+    expTabBtn?.classList.remove('active');
+    pnlTabBtn?.setAttribute('aria-selected', 'true');
+    expTabBtn?.setAttribute('aria-selected', 'false');
+  }
+}
+
+// ─── Exposure Input Handlers ──────────────────────────────────
+function onExpInvestmentSlider(val) {
+  const num = parseFloat(val);
+  if (!isFinite(num) || num <= 0) return;
+  expState.investment = num;
+  const inputEl = document.getElementById('expInvestment');
+  if (inputEl) inputEl.value = num;
+  renderExposureVisualizer();
+}
+
+function onExpInvestmentInput(val) {
+  const clean = typeof val === 'string' ? val.replace(/[^0-9.]/g, '') : val;
+  const num = parseFloat(clean);
+  if (isFinite(num) && num > 0) {
+    expState.investment = num;
+    const slider = document.getElementById('sliderExpInvestment');
+    if (slider) {
+      if (num > parseFloat(slider.max)) slider.max = (num * 1.5).toString();
+      slider.value = num;
+    }
+    renderExposureVisualizer();
+  }
+}
+
+function onExpStockSlider(val) {
+  const num = parseFloat(val);
+  if (!isFinite(num) || num <= 0) return;
+  expState.stockPrice = num;
+  const inputEl = document.getElementById('expStockPrice');
+  if (inputEl) inputEl.value = Math.round(num);
+  renderExposureVisualizer();
+}
+
+function onExpStockInput(val) {
+  const clean = typeof val === 'string' ? val.replace(',', '.') : val;
+  const num = parseFloat(clean);
+  if (isFinite(num) && num > 0) {
+    expState.stockPrice = num;
+    const slider = document.getElementById('sliderExpStockPrice');
+    if (slider) {
+      if (num > parseFloat(slider.max)) slider.max = Math.round(num * 1.5).toString();
+      if (num < parseFloat(slider.min)) slider.min = Math.max(1, Math.round(num * 0.5)).toString();
+      slider.value = num;
+    }
+    renderExposureVisualizer();
+  }
+}
+
+function onExpDteSlider(val) {
+  const num = parseInt(val, 10);
+  if (!isFinite(num) || num <= 0) return;
+  expState.dte = num;
+  const inputEl = document.getElementById('expDte');
+  if (inputEl) inputEl.value = num;
+  renderExposureVisualizer();
+}
+
+function onExpDteInput(val) {
+  const num = parseInt(val, 10);
+  if (isFinite(num) && num > 0) {
+    expState.dte = num;
+    const slider = document.getElementById('sliderExpDte');
+    if (slider) {
+      if (num > parseFloat(slider.max)) slider.max = Math.max(365, num * 1.2).toString();
+      slider.value = num;
+    }
+    renderExposureVisualizer();
+  }
+}
+
+function onExpIvSlider(val) {
+  const num = parseFloat(val);
+  if (!isFinite(num) || num <= 0) return;
+  expState.iv = num;
+  const inputEl = document.getElementById('expIv');
+  if (inputEl) inputEl.value = num.toFixed(2);
+  renderExposureVisualizer();
+}
+
+function onExpIvInput(val) {
+  const clean = typeof val === 'string' ? val.replace(',', '.') : val;
+  const num = parseFloat(clean);
+  if (isFinite(num) && num > 0) {
+    expState.iv = num;
+    const slider = document.getElementById('sliderExpIv');
+    if (slider) {
+      if (num > parseFloat(slider.max)) slider.max = (num * 1.5).toFixed(2);
+      slider.value = num;
+    }
+    renderExposureVisualizer();
+  }
+}
+
+function setExpOptionType(type) {
+  expState.optionType = type;
+  const callBtn = document.getElementById('expBtnCall');
+  const putBtn = document.getElementById('expBtnPut');
+  if (callBtn) callBtn.className = 'exp-type-toggle-btn ' + (type === 'calls' ? 'active' : '');
+  if (putBtn) putBtn.className = 'exp-type-toggle-btn ' + (type === 'puts' ? 'active' : '');
+  renderExposureVisualizer();
+}
+
+// ─── Render Exposure Visualizer ───────────────────────────────
+function renderExposureVisualizer() {
+  const S = expState.stockPrice;
+  const T = Math.max(0.001, expState.dte / 365);
+  const iv = expState.iv;
+  const r = expState.r;
+  const type = expState.optionType;
+  const inv = expState.investment;
+
+  // Determine strike step based on stock price
+  const strikeStep = S >= 200 ? 20 : S >= 80 ? 10 : S >= 30 ? 5 : S >= 10 ? 2.5 : 1;
+  const atmBase = Math.round(S / strikeStep) * strikeStep;
+
+  // 5 discrete strikes for table (matching Example.png: e.g. 80, 90, 100, 110, 120 when S=100)
+  const tableStrikes = [
+    atmBase - 2 * strikeStep,
+    atmBase - 1 * strikeStep,
+    atmBase,
+    atmBase + 1 * strikeStep,
+    atmBase + 2 * strikeStep,
+  ].filter(k => k > 0);
+
+  // 7 axis marks (e.g. 70, 80, 90, 100, 110, 120, 130)
+  const minK = Math.max(1, atmBase - 3 * strikeStep);
+  const maxK = atmBase + 3 * strikeStep;
+  const axisStrikes = [];
+  for (let stepIdx = -3; stepIdx <= 3; stepIdx++) {
+    const kVal = atmBase + stepIdx * strikeStep;
+    if (kVal > 0) axisStrikes.push(kVal);
+  }
+
+  // Dense evaluation points for smooth chart curves
+  const denseCount = 41;
+  const chartStrikes = [];
+  for (let i = 0; i < denseCount; i++) {
+    const kVal = minK + (i / (denseCount - 1)) * (maxK - minK);
+    chartStrikes.push(parseFloat(kVal.toFixed(2)));
+  }
+
+  // Calculate table rows
+  const isCall = type === 'calls';
+  const tableData = tableStrikes.map(K => {
+    const metrics = getOptionMetrics(S, K, T, r, iv, type);
+    const exp = calculateExposureMetrics({
+      investment: inv,
+      stockPrice: S,
+      strike: K,
+      optPrice: metrics.price,
+      delta: metrics.delta,
+      optionType: type,
+    });
+
+    // Moneyness type
+    let moneyness = 'ATM';
+    let badgeClass = 'badge-atm';
+    const diff = K - S;
+
+    if (Math.abs(diff) < 0.001 || K === atmBase) {
+      moneyness = 'ATM';
+      badgeClass = 'badge-atm';
+    } else if (isCall ? diff < 0 : diff > 0) {
+      moneyness = 'ITM';
+      badgeClass = 'badge-itm';
+    } else {
+      moneyness = 'OTM';
+      badgeClass = 'badge-otm';
+    }
+
+    return {
+      K,
+      metrics,
+      exp,
+      moneyness,
+      badgeClass,
+      isATM: moneyness === 'ATM',
+    };
+  });
+
+  // Calculate dense chart data
+  const chartData = chartStrikes.map(K => {
+    const metrics = getOptionMetrics(S, K, T, r, iv, type);
+    const exp = calculateExposureMetrics({
+      investment: inv,
+      stockPrice: S,
+      strike: K,
+      optPrice: metrics.price,
+      delta: metrics.delta,
+      optionType: type,
+    });
+    return {
+      K,
+      delta: Math.abs(metrics.delta),
+      omega: Math.max(0, exp.effectiveLeverage),
+      price: metrics.price,
+      notionalExposure: exp.notionalExposure,
+      contracts: exp.contracts,
+    };
+  });
+
+  // 1. Render Table
+  renderExposureTable(tableData, inv);
+
+  // 2. Render ATM Metric Highlights
+  renderExposureAtmMetrics(S, T, r, iv, type, inv);
+
+  // 3. Render Chart
+  renderExposureChart(chartData, tableData, axisStrikes, S, minK, maxK);
+}
+
+function renderExposureTable(tableData, inv) {
+  const tbody = document.getElementById('exposureTableBody');
+  const thContracts = document.getElementById('colHeaderContracts');
+  if (!tbody) return;
+
+  const invStr = inv >= 1000 ? `$${(inv / 1000).toFixed(inv % 1000 === 0 ? 0 : 1)}k` : `$${inv}`;
+  if (thContracts) {
+    thContracts.textContent = `Contracts (${invStr})`;
+  }
+
+  tbody.innerHTML = tableData.map(row => {
+    const priceStr = '$' + fmt(row.metrics.price, 2);
+    const deltaStr = fmt(Math.abs(row.metrics.delta), 2);
+    const contractsStr = fmt(row.exp.contracts, 1);
+    const notionalStr = '$' + Math.round(row.exp.notionalExposure).toLocaleString('en-US').replace(/,/g, ' ');
+    const leverageStr = fmt(row.exp.effectiveLeverage, 1) + 'x';
+    const atmClass = row.isATM ? 'atm-row' : '';
+
+    return `
+      <tr class="${atmClass}">
+        <td><strong>$${fmt(row.K, 0)}</strong></td>
+        <td><span class="exp-badge ${row.badgeClass}">${row.moneyness}</span></td>
+        <td>${priceStr}</td>
+        <td>${deltaStr}</td>
+        <td>${contractsStr}</td>
+        <td>${notionalStr}</td>
+        <td><strong>${leverageStr}</strong></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderExposureAtmMetrics(S, T, r, iv, type, inv) {
+  const atmMetrics = getOptionMetrics(S, S, T, r, iv, type);
+  const atmExp = calculateExposureMetrics({
+    investment: inv,
+    stockPrice: S,
+    strike: S,
+    optPrice: atmMetrics.price,
+    delta: atmMetrics.delta,
+    optionType: type,
+  });
+
+  const elDelta = document.getElementById('dispAtmDelta');
+  const elOmega = document.getElementById('dispAtmOmega');
+
+  if (elDelta) elDelta.textContent = fmt(Math.abs(atmMetrics.delta), 2);
+  if (elOmega) elOmega.textContent = fmt(atmExp.effectiveLeverage, 1) + 'x';
+}
+
+function renderExposureChart(denseData, tableData, axisStrikes, S, minK, maxK) {
+  const box = document.getElementById('exposureChartBox');
+  if (!box) return;
+
+  const width = 760;
+  const height = 300;
+  const padLeft = 45;
+  const padRight = 30;
+  const padTop = 20;
+  const padBottom = 35;
+  const plotWidth = width - padLeft - padRight;
+  const plotHeight = height - padTop - padBottom;
+
+  // Ratio (Omega Leverage) scale: ticks 0, 5, 10, 15, 20, 25
+  const yMax = 25;
+  const yTicks = [0, 5, 10, 15, 20, 25];
+
+  // Coordinate mapping functions
+  const getX = K => padLeft + ((K - minK) / (maxK - minK)) * plotWidth;
+  // Omega plotted on 0..25 scale
+  const getYOmega = omegaVal => padTop + plotHeight - (Math.min(omegaVal, yMax) / yMax) * plotHeight;
+  // Delta plotted across 0..1 full chart height (0 = bottom, 1 = top)
+  const getYDelta = deltaVal => padTop + plotHeight - Math.min(1, Math.max(0, deltaVal)) * plotHeight;
+
+  // Generate horizontal grid lines
+  const gridLines = yTicks.map(t => {
+    const y = getYOmega(t);
+    return `
+      <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+      <text x="${padLeft - 8}" y="${y + 4}" fill="#64748b" font-size="11" font-family="Inter, sans-serif" text-anchor="end">${t}</text>
+    `;
+  }).join('');
+
+  // Generate X-axis tick labels (e.g. 70, 80, 90, 100, 110, 120, 130)
+  const xLabels = axisStrikes.map(kVal => {
+    const x = getX(kVal);
+    return `
+      <line x1="${x}" y1="${padTop + plotHeight}" x2="${x}" y2="${padTop + plotHeight + 5}" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+      <text x="${x}" y="${padTop + plotHeight + 18}" fill="#94a3b8" font-size="11" font-family="Inter, sans-serif" text-anchor="middle">${fmt(kVal, 0)}</text>
+    `;
+  }).join('');
+
+  // ATM Guideline
+  const xAtm = getX(S);
+  const atmLine = `
+    <line x1="${xAtm}" y1="${padTop}" x2="${xAtm}" y2="${padTop + plotHeight}" stroke="rgba(255, 255, 255, 0.45)" stroke-dasharray="4,4" stroke-width="1.5" />
+  `;
+
+  // Generate Path for Delta (|Δ|)
+  const deltaPoints = denseData.map(d => `${getX(d.K).toFixed(1)},${getYDelta(d.delta).toFixed(1)}`).join(' L ');
+  const deltaPath = `M ${deltaPoints}`;
+
+  // Generate Path for Omega (Leverage)
+  const omegaPoints = denseData.map(d => `${getX(d.K).toFixed(1)},${getYOmega(d.omega).toFixed(1)}`).join(' L ');
+  const omegaPath = `M ${omegaPoints}`;
+
+  // Key Strike Markers
+  const keyMarkers = tableData.map(row => {
+    const x = getX(row.K);
+    const dVal = Math.abs(row.metrics.delta);
+    const oVal = row.exp.effectiveLeverage;
+    const yDelta = getYDelta(dVal);
+    const yOmega = getYOmega(oVal);
+
+    return `
+      <circle cx="${x.toFixed(1)}" cy="${yDelta.toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#09090f" stroke-width="1.5" />
+      <circle cx="${x.toFixed(1)}" cy="${yOmega.toFixed(1)}" r="3.5" fill="#4ade80" stroke="#09090f" stroke-width="1.5" />
+    `;
+  }).join('');
+
+  // Compose SVG
+  box.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" id="svgExposureChart">
+      <!-- Grid -->
+      ${gridLines}
+      <!-- ATM Guideline -->
+      ${atmLine}
+      <!-- X-axis Labels -->
+      ${xLabels}
+      <!-- Delta Curve (Blue) -->
+      <path d="${deltaPath}" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Omega Curve (Green) -->
+      <path d="${omegaPath}" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Key Strike Markers -->
+      ${keyMarkers}
+      <!-- Interactive Crosshair Overlay Container -->
+      <g id="chartCrosshairGroup" style="display:none;">
+        <line id="crosshairLine" x1="0" y1="${padTop}" x2="0" y2="${padTop + plotHeight}" stroke="rgba(255,255,255,0.4)" stroke-dasharray="2,2" stroke-width="1.2" />
+        <circle id="crosshairDeltaDot" r="5" fill="#3b82f6" stroke="#ffffff" stroke-width="2" />
+        <circle id="crosshairOmegaDot" r="5" fill="#4ade80" stroke="#ffffff" stroke-width="2" />
+      </g>
+      <!-- Hover Overlay Rect -->
+      <rect x="${padLeft}" y="${padTop}" width="${plotWidth}" height="${plotHeight}" fill="transparent" id="chartHoverOverlay" style="cursor: crosshair;" />
+    </svg>
+    <div id="chartFloatingTooltip" class="chart-tooltip" style="display:none;"></div>
+  `;
+
+  // Attach interactive hover listener
+  attachChartHoverListener(denseData, minK, maxK, plotWidth, plotHeight, padLeft, padTop, yMax);
+}
+
+function attachChartHoverListener(denseData, minK, maxK, plotWidth, plotHeight, padLeft, padTop, yMax) {
+  const overlay = document.getElementById('chartHoverOverlay');
+  const crosshairGroup = document.getElementById('chartCrosshairGroup');
+  const crosshairLine = document.getElementById('crosshairLine');
+  const dotDelta = document.getElementById('crosshairDeltaDot');
+  const dotOmega = document.getElementById('crosshairOmegaDot');
+  const tooltip = document.getElementById('chartFloatingTooltip');
+  const svg = document.getElementById('svgExposureChart');
+
+  if (!overlay || !svg || !tooltip) return;
+
+  const getYOmega = omegaVal => padTop + plotHeight - (Math.min(omegaVal, yMax) / yMax) * plotHeight;
+  const getYDelta = deltaVal => padTop + plotHeight - Math.min(1, Math.max(0, deltaVal)) * plotHeight;
+  const getX = K => padLeft + ((K - minK) / (maxK - minK)) * plotWidth;
+
+  const handlePointer = e => {
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const svgX = ((clientX - rect.left) / rect.width) * 760;
+
+    if (svgX < padLeft || svgX > padLeft + plotWidth) {
+      if (crosshairGroup) crosshairGroup.style.display = 'none';
+      if (tooltip) tooltip.style.display = 'none';
+      return;
+    }
+
+    // Find nearest data point
+    const strikeAtX = minK + ((svgX - padLeft) / plotWidth) * (maxK - minK);
+    let nearest = denseData[0];
+    let minDist = Infinity;
+    for (const d of denseData) {
+      const dist = Math.abs(d.K - strikeAtX);
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = d;
+      }
+    }
+
+    const nx = getX(nearest.K);
+    const nyDelta = getYDelta(nearest.delta);
+    const nyOmega = getYOmega(nearest.omega);
+
+    if (crosshairGroup) crosshairGroup.style.display = '';
+    if (crosshairLine) {
+      crosshairLine.setAttribute('x1', nx);
+      crosshairLine.setAttribute('x2', nx);
+    }
+    if (dotDelta) {
+      dotDelta.setAttribute('cx', nx);
+      dotDelta.setAttribute('cy', nyDelta);
+    }
+    if (dotOmega) {
+      dotOmega.setAttribute('cx', nx);
+      dotOmega.setAttribute('cy', nyOmega);
+    }
+
+    // Update Tooltip
+    tooltip.style.display = 'block';
+    tooltip.innerHTML = `
+      <div class="tt-title">Strike: $${fmt(nearest.K, 1)}</div>
+      <div class="tt-row"><span style="color:#60a5fa">Delta (|Δ|):</span> <strong>${fmt(nearest.delta, 2)}</strong></div>
+      <div class="tt-row"><span style="color:#4ade80">Omega (Leverage):</span> <strong>${fmt(nearest.omega, 1)}x</strong></div>
+      <div class="tt-row"><span style="color:#cbd5e1">Option Price:</span> <strong>$${fmt(nearest.price, 2)}</strong></div>
+      <div class="tt-row"><span style="color:#cbd5e1">Notional Exp.:</span> <strong>$${Math.round(nearest.notionalExposure).toLocaleString('en-US')}</strong></div>
+    `;
+
+    // Position tooltip relative to container box
+    const boxRect = overlay.closest('.chart-svg-box').getBoundingClientRect();
+    const ttLeft = Math.min(boxRect.width - 170, Math.max(10, clientX - boxRect.left + 15));
+    const ttTop = Math.min(boxRect.height - 110, Math.max(10, clientY - boxRect.top - 20));
+    tooltip.style.left = `${ttLeft}px`;
+    tooltip.style.top = `${ttTop}px`;
+  };
+
+  overlay.addEventListener('mousemove', handlePointer);
+  overlay.addEventListener('touchmove', handlePointer, { passive: true });
+
+  const hidePointer = () => {
+    if (crosshairGroup) crosshairGroup.style.display = 'none';
+    if (tooltip) tooltip.style.display = 'none';
+  };
+
+  overlay.addEventListener('mouseleave', hidePointer);
+  overlay.addEventListener('touchend', hidePointer);
+}
+
+// ─── Attach everything to window & Bind Listeners ─────────────
+window.switchTab = switchTab;
+window.onExpInvestmentSlider = onExpInvestmentSlider;
+window.onExpInvestmentInput = onExpInvestmentInput;
+window.onExpStockSlider = onExpStockSlider;
+window.onExpStockInput = onExpStockInput;
+window.onExpDteSlider = onExpDteSlider;
+window.onExpDteInput = onExpDteInput;
+window.onExpIvSlider = onExpIvSlider;
+window.onExpIvInput = onExpIvInput;
+window.setExpOptionType = setExpOptionType;
+window.renderExposureVisualizer = renderExposureVisualizer;
+window.calculateExposureMetrics = calculateExposureMetrics;
+window.getOptionMetrics = getOptionMetrics;
+
+// Direct DOM event binding after load
+document.addEventListener('DOMContentLoaded', () => {
+  // Navigation Tabs
+  document.getElementById('tabPnlExplorer')?.addEventListener('click', () => switchTab('pnl-explorer'));
+  document.getElementById('tabExposureVisualizer')?.addEventListener('click', () => switchTab('exposure-visualizer'));
+
+  // Sliders & Inputs
+  const slInv = document.getElementById('sliderExpInvestment');
+  const inInv = document.getElementById('expInvestment');
+  slInv?.addEventListener('input', e => onExpInvestmentSlider(e.target.value));
+  inInv?.addEventListener('input', e => onExpInvestmentInput(e.target.value));
+
+  const slStock = document.getElementById('sliderExpStockPrice');
+  const inStock = document.getElementById('expStockPrice');
+  slStock?.addEventListener('input', e => onExpStockSlider(e.target.value));
+  inStock?.addEventListener('input', e => onExpStockInput(e.target.value));
+
+  const slDte = document.getElementById('sliderExpDte');
+  const inDte = document.getElementById('expDte');
+  slDte?.addEventListener('input', e => onExpDteSlider(e.target.value));
+  inDte?.addEventListener('input', e => onExpDteInput(e.target.value));
+
+  const slIv = document.getElementById('sliderExpIv');
+  const inIv = document.getElementById('expIv');
+  slIv?.addEventListener('input', e => onExpIvSlider(e.target.value));
+  inIv?.addEventListener('input', e => onExpIvInput(e.target.value));
+
+  // Option Type Buttons
+  document.getElementById('expBtnCall')?.addEventListener('click', () => setExpOptionType('calls'));
+  document.getElementById('expBtnPut')?.addEventListener('click', () => setExpOptionType('puts'));
+
+  // Initial render of Exposure Visualizer
+  renderExposureVisualizer();
+});
+
+// Also trigger immediate render if DOM is already ready
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  renderExposureVisualizer();
+}
+
+
