@@ -719,6 +719,10 @@ const expState = {
   iv: 0.30,
   r: 0.05,
   optionType: 'calls', // 'calls' | 'puts'
+  strikeRangePct: 30,  // ±% (10 to 60)
+  strikeStep: 'auto',   // 'auto' | '1' | '2.5' | '5' | '10' | '20' | 'custom'
+  customStrikeStep: 10,
+  moneynessFilter: 'all', // 'all' | 'otm' | 'itm'
 };
 
 // ─── Tab Switcher ─────────────────────────────────────────────
@@ -842,6 +846,76 @@ function onExpIvInput(val) {
   }
 }
 
+// ─── Strike Range & Step Handlers ─────────────────────────────
+function onExpStrikeRangeSlider(val) {
+  const num = parseFloat(val);
+  if (!isFinite(num) || num <= 0) return;
+  expState.strikeRangePct = num;
+  const inputEl = document.getElementById('expStrikeRange');
+  if (inputEl) inputEl.value = Math.round(num);
+  renderExposureVisualizer();
+}
+
+function onExpStrikeRangeInput(val) {
+  const clean = typeof val === 'string' ? val.replace(/[^0-9.]/g, '') : val;
+  const num = parseFloat(clean);
+  if (isFinite(num) && num >= 5 && num <= 90) {
+    expState.strikeRangePct = num;
+    const slider = document.getElementById('sliderExpStrikeRange');
+    if (slider) {
+      if (num > parseFloat(slider.max)) slider.max = num.toString();
+      slider.value = num;
+    }
+    renderExposureVisualizer();
+  }
+}
+
+function getAutoStrikeStep(S) {
+  return S >= 500 ? 50 : S >= 200 ? 20 : S >= 80 ? 10 : S >= 30 ? 5 : S >= 10 ? 2.5 : 1;
+}
+
+function getEffectiveStrikeStep(S) {
+  if (expState.strikeStep === 'auto') {
+    return getAutoStrikeStep(S);
+  }
+  if (expState.strikeStep === 'custom') {
+    return Math.max(0.1, expState.customStrikeStep || getAutoStrikeStep(S));
+  }
+  const parsed = parseFloat(expState.strikeStep);
+  return isFinite(parsed) && parsed > 0 ? parsed : getAutoStrikeStep(S);
+}
+
+function onExpStrikeStepSelectChange(val) {
+  expState.strikeStep = val;
+  const step = getEffectiveStrikeStep(expState.stockPrice);
+  const inputEl = document.getElementById('expStrikeStepInput');
+  if (inputEl) inputEl.value = step;
+  renderExposureVisualizer();
+}
+
+function onExpStrikeStepInput(val) {
+  const clean = typeof val === 'string' ? val.replace(',', '.') : val;
+  const num = parseFloat(clean);
+  if (isFinite(num) && num > 0) {
+    expState.customStrikeStep = num;
+    expState.strikeStep = 'custom';
+    const selectEl = document.getElementById('expStrikeStepSelect');
+    if (selectEl) selectEl.value = 'custom';
+    renderExposureVisualizer();
+  }
+}
+
+function setExpMoneynessFilter(filter) {
+  expState.moneynessFilter = filter;
+  const allBtn = document.getElementById('expFilterAll');
+  const otmBtn = document.getElementById('expFilterOtm');
+  const itmBtn = document.getElementById('expFilterItm');
+  if (allBtn) allBtn.className = 'exp-type-toggle-btn ' + (filter === 'all' ? 'active' : '');
+  if (otmBtn) otmBtn.className = 'exp-type-toggle-btn ' + (filter === 'otm' ? 'active' : '');
+  if (itmBtn) itmBtn.className = 'exp-type-toggle-btn ' + (filter === 'itm' ? 'active' : '');
+  renderExposureVisualizer();
+}
+
 function setExpOptionType(type) {
   expState.optionType = type;
   const callBtn = document.getElementById('expBtnCall');
@@ -859,39 +933,102 @@ function renderExposureVisualizer() {
   const r = expState.r;
   const type = expState.optionType;
   const inv = expState.investment;
+  const rangePct = Math.max(0.05, Math.min(0.9, expState.strikeRangePct / 100));
+  const effectiveStep = getEffectiveStrikeStep(S);
 
-  // Determine strike step based on stock price
-  const strikeStep = S >= 200 ? 20 : S >= 80 ? 10 : S >= 30 ? 5 : S >= 10 ? 2.5 : 1;
-  const atmBase = Math.round(S / strikeStep) * strikeStep;
+  // Sync Select & Input Pill for Strike Step
+  const selectEl = document.getElementById('expStrikeStepSelect');
+  if (selectEl) {
+    const autoOpt = selectEl.querySelector('option[value="auto"]');
+    if (autoOpt) autoOpt.textContent = `Auto ($${fmt(getAutoStrikeStep(S), 2)})`;
+    if (expState.strikeStep !== 'custom' && selectEl.value !== expState.strikeStep) {
+      selectEl.value = expState.strikeStep;
+    }
+  }
+  const stepInput = document.getElementById('expStrikeStepInput');
+  if (stepInput && document.activeElement !== stepInput) {
+    stepInput.value = effectiveStep;
+  }
 
-  // 5 discrete strikes for table (matching Example.png: e.g. 80, 90, 100, 110, 120 when S=100)
-  const tableStrikes = [
-    atmBase - 2 * strikeStep,
-    atmBase - 1 * strikeStep,
-    atmBase,
-    atmBase + 1 * strikeStep,
-    atmBase + 2 * strikeStep,
-  ].filter(k => k > 0);
+  // Base ATM Strike
+  const atmBase = Math.round(S / effectiveStep) * effectiveStep;
 
-  // 7 axis marks (e.g. 70, 80, 90, 100, 110, 120, 130)
-  const minK = Math.max(1, atmBase - 3 * strikeStep);
-  const maxK = atmBase + 3 * strikeStep;
+  // Full strike bounds based on percentage range
+  const fullMinK = Math.max(effectiveStep, Math.floor((S * (1 - rangePct)) / effectiveStep) * effectiveStep);
+  const fullMaxK = Math.max(fullMinK + effectiveStep, Math.ceil((S * (1 + rangePct)) / effectiveStep) * effectiveStep);
+
+  // Apply moneyness filtering to chart view bounds
+  let chartMinK = fullMinK;
+  let chartMaxK = fullMaxK;
+  const filter = expState.moneynessFilter;
+  const isCall = type === 'calls';
+
+  if (filter === 'otm') {
+    if (isCall) {
+      chartMinK = Math.max(effectiveStep, atmBase);
+      chartMaxK = fullMaxK;
+    } else {
+      chartMinK = fullMinK;
+      chartMaxK = Math.min(fullMaxK, atmBase);
+    }
+  } else if (filter === 'itm') {
+    if (isCall) {
+      chartMinK = fullMinK;
+      chartMaxK = Math.min(fullMaxK, atmBase);
+    } else {
+      chartMinK = Math.max(effectiveStep, atmBase);
+      chartMaxK = fullMaxK;
+    }
+  }
+
+  if (chartMaxK <= chartMinK) {
+    chartMaxK = chartMinK + effectiveStep;
+  }
+
+  // Generate discrete strikes for table
+  const allStrikes = [];
+  for (let k = fullMinK; k <= fullMaxK + 0.0001; k += effectiveStep) {
+    allStrikes.push(parseFloat(k.toFixed(2)));
+  }
+
+  let filteredStrikes = allStrikes.filter(K => {
+    const diff = K - S;
+    const isATM = Math.abs(diff) < 0.001 || K === atmBase;
+    if (filter === 'all') return true;
+    if (filter === 'otm') {
+      return isATM || (isCall ? diff > 0 : diff < 0);
+    }
+    if (filter === 'itm') {
+      return isATM || (isCall ? diff < 0 : diff > 0);
+    }
+    return true;
+  });
+
+  // Keep table rows neat & balanced (e.g. 5 to 11 rows max)
+  let tableStrikes = filteredStrikes;
+  if (filteredStrikes.length > 13) {
+    const jump = Math.ceil(filteredStrikes.length / 9);
+    tableStrikes = filteredStrikes.filter((k, idx) => idx % jump === 0 || k === atmBase || idx === filteredStrikes.length - 1);
+    tableStrikes = Array.from(new Set(tableStrikes)).sort((a, b) => a - b);
+  }
+
+  // Generate 7 clean marks for chart X-axis
+  const axisTicksCount = 7;
   const axisStrikes = [];
-  for (let stepIdx = -3; stepIdx <= 3; stepIdx++) {
-    const kVal = atmBase + stepIdx * strikeStep;
-    if (kVal > 0) axisStrikes.push(kVal);
+  for (let i = 0; i < axisTicksCount; i++) {
+    const kVal = chartMinK + (i / (axisTicksCount - 1)) * (chartMaxK - chartMinK);
+    axisStrikes.push(parseFloat(kVal.toFixed(1)));
   }
 
   // Dense evaluation points for smooth chart curves
-  const denseCount = 41;
+  const denseCount = 45;
   const chartStrikes = [];
   for (let i = 0; i < denseCount; i++) {
-    const kVal = minK + (i / (denseCount - 1)) * (maxK - minK);
+    const kVal = chartMinK + (i / (denseCount - 1)) * (chartMaxK - chartMinK);
     chartStrikes.push(parseFloat(kVal.toFixed(2)));
   }
 
   // Calculate table rows
-  const isCall = type === 'calls';
   const tableData = tableStrikes.map(K => {
     const metrics = getOptionMetrics(S, K, T, r, iv, type);
     const exp = calculateExposureMetrics({
@@ -957,7 +1094,7 @@ function renderExposureVisualizer() {
   renderExposureAtmMetrics(S, T, r, iv, type, inv);
 
   // 3. Render Chart
-  renderExposureChart(chartData, tableData, axisStrikes, S, minK, maxK);
+  renderExposureChart(chartData, tableData, axisStrikes, S, chartMinK, chartMaxK);
 }
 
 function renderExposureTable(tableData, inv) {
@@ -1208,6 +1345,11 @@ window.onExpDteSlider = onExpDteSlider;
 window.onExpDteInput = onExpDteInput;
 window.onExpIvSlider = onExpIvSlider;
 window.onExpIvInput = onExpIvInput;
+window.onExpStrikeRangeSlider = onExpStrikeRangeSlider;
+window.onExpStrikeRangeInput = onExpStrikeRangeInput;
+window.onExpStrikeStepSelectChange = onExpStrikeStepSelectChange;
+window.onExpStrikeStepInput = onExpStrikeStepInput;
+window.setExpMoneynessFilter = setExpMoneynessFilter;
 window.setExpOptionType = setExpOptionType;
 window.renderExposureVisualizer = renderExposureVisualizer;
 window.calculateExposureMetrics = calculateExposureMetrics;
@@ -1240,9 +1382,24 @@ document.addEventListener('DOMContentLoaded', () => {
   slIv?.addEventListener('input', e => onExpIvSlider(e.target.value));
   inIv?.addEventListener('input', e => onExpIvInput(e.target.value));
 
+  const slRange = document.getElementById('sliderExpStrikeRange');
+  const inRange = document.getElementById('expStrikeRange');
+  slRange?.addEventListener('input', e => onExpStrikeRangeSlider(e.target.value));
+  inRange?.addEventListener('input', e => onExpStrikeRangeInput(e.target.value));
+
+  const selStep = document.getElementById('expStrikeStepSelect');
+  const inStep = document.getElementById('expStrikeStepInput');
+  selStep?.addEventListener('change', e => onExpStrikeStepSelectChange(e.target.value));
+  inStep?.addEventListener('input', e => onExpStrikeStepInput(e.target.value));
+
   // Option Type Buttons
   document.getElementById('expBtnCall')?.addEventListener('click', () => setExpOptionType('calls'));
   document.getElementById('expBtnPut')?.addEventListener('click', () => setExpOptionType('puts'));
+
+  // Moneyness Filter Buttons
+  document.getElementById('expFilterAll')?.addEventListener('click', () => setExpMoneynessFilter('all'));
+  document.getElementById('expFilterOtm')?.addEventListener('click', () => setExpMoneynessFilter('otm'));
+  document.getElementById('expFilterItm')?.addEventListener('click', () => setExpMoneynessFilter('itm'));
 
   // Initial render of Exposure Visualizer
   renderExposureVisualizer();

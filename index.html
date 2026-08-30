@@ -405,12 +405,59 @@
               </div>
             </div>
 
-            <!-- Option Type (Call / Put) -->
-            <div class="exp-control-row exp-type-row">
-              <label class="exp-control-name">Option Type</label>
-              <div class="exp-type-pill-group">
-                <button type="button" class="exp-type-toggle-btn active" id="expBtnCall" onclick="setExpOptionType('calls')">Call</button>
-                <button type="button" class="exp-type-toggle-btn" id="expBtnPut" onclick="setExpOptionType('puts')">Put</button>
+            <!-- Strike Range (±%) -->
+            <div class="exp-control-row">
+              <label class="exp-control-name" for="expStrikeRange">Strike Range</label>
+              <div class="exp-slider-wrap">
+                <input type="range" class="exp-slider" id="sliderExpStrikeRange"
+                       min="10" max="60" step="5" value="30"
+                       oninput="onExpStrikeRangeSlider(this.value)" />
+              </div>
+              <div class="exp-value-pill">
+                <input type="number" id="expStrikeRange" value="30" min="5" max="90" step="5"
+                       oninput="onExpStrikeRangeInput(this.value)" />
+              </div>
+            </div>
+
+            <!-- Strike Step ($) -->
+            <div class="exp-control-row">
+              <label class="exp-control-name" for="expStrikeStepSelect">Strike Step</label>
+              <div class="exp-step-select-wrap">
+                <select id="expStrikeStepSelect" class="exp-select" onchange="onExpStrikeStepSelectChange(this.value)">
+                  <option value="auto" selected>Auto ($10.00)</option>
+                  <option value="1">$1.00</option>
+                  <option value="2.5">$2.50</option>
+                  <option value="5">$5.00</option>
+                  <option value="10">$10.00</option>
+                  <option value="20">$20.00</option>
+                  <option value="custom">Custom...</option>
+                </select>
+              </div>
+              <div class="exp-value-pill" id="expStrikeStepPill">
+                <input type="number" id="expStrikeStepInput" value="10" min="0.1" max="1000" step="0.5"
+                       oninput="onExpStrikeStepInput(this.value)" />
+              </div>
+            </div>
+
+            <!-- Toggles Row: Option Type (Call / Put) & Filter (All / OTM / ITM) -->
+            <div class="exp-control-row exp-toggles-row">
+              <!-- Option Type (Call / Put) -->
+              <div class="exp-toggle-group-block">
+                <label class="exp-control-name">Option Type</label>
+                <div class="exp-type-pill-group">
+                  <button type="button" class="exp-type-toggle-btn active" id="expBtnCall" onclick="setExpOptionType('calls')">Call</button>
+                  <button type="button" class="exp-type-toggle-btn" id="expBtnPut" onclick="setExpOptionType('puts')">Put</button>
+                </div>
+              </div>
+
+              <!-- Moneyness Filter (All / OTM / ITM) -->
+              <div class="exp-toggle-group-block">
+                <label class="exp-control-name">Filter</label>
+                <div class="exp-type-pill-group">
+                  <button type="button" class="exp-type-toggle-btn active" id="expFilterAll" onclick="setExpMoneynessFilter('all')">All Strikes</button>
+                  <button type="button" class="exp-type-toggle-btn" id="expFilterOtm" onclick="setExpMoneynessFilter('otm')">OTM Only</button>
+                  <button type="button" class="exp-type-toggle-btn" id="expFilterItm" onclick="setExpMoneynessFilter('itm')">ITM Only</button>
+                </div>
               </div>
             </div>
 
