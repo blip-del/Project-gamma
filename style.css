@@ -1109,104 +1109,149 @@ tbody td {
 
 /* Controls Card & Sliders */
 .exposure-controls-card {
-  padding: 28px 32px;
+  padding: 24px 28px;
 }
 .exposure-controls-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px 36px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 36px;
   align-items: center;
 }
 .exp-control-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
 }
 .exp-control-name {
-  width: 95px;
+  width: 110px;
+  min-width: 110px;
+  max-width: 110px;
   flex-shrink: 0;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 .exp-slider-wrap {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
 }
 .exp-slider {
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 2px;
-  outline: none;
-  -webkit-appearance: none;
-  cursor: pointer;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 4px !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 2px !important;
+  outline: none !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  display: block !important;
+}
+.exp-slider:hover {
+  background: rgba(255, 255, 255, 0.28) !important;
 }
 .exp-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 22px;
-  border-radius: 4px;
-  background: #ffffff;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-  transition: transform 0.1s ease;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 16px !important;
+  height: 22px !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+  transition: transform 0.1s ease, background 0.1s ease !important;
+  margin-top: 0 !important;
 }
 .exp-slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
+  background: #f8fafc !important;
 }
+.exp-slider::-moz-range-thumb {
+  width: 16px !important;
+  height: 22px !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  cursor: pointer !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+  transition: transform 0.1s ease !important;
+}
+.exp-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+}
+
 .exp-value-pill {
-  min-width: 72px;
-  height: 40px;
-  padding: 0 6px;
-  flex-shrink: 0;
-  background: rgba(18, 18, 26, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 38px !important;
+  flex-shrink: 0 !important;
+  background: rgba(18, 18, 26, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+  overflow: hidden !important;
+  padding: 0 !important;
 }
-.exp-value-pill input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #ffffff;
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 600;
-  text-align: center;
-  -moz-appearance: textfield;
+.exp-value-pill input,
+.exp-value-pill input[type="number"] {
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: #ffffff !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  -moz-appearance: textfield !important;
 }
 .exp-value-pill input::-webkit-outer-spin-button,
-.exp-value-pill input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.exp-value-pill input::-webkit-inner-spin-button,
+.exp-value-pill input[type="number"]::-webkit-outer-spin-button,
+.exp-value-pill input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
 }
 
 /* Option Type Toggle in Exposure Controls */
 .exp-type-row {
   justify-content: flex-start;
+  grid-column: 1 / -1;
+  margin-top: 4px;
 }
 .exp-type-pill-group {
   display: flex;
   background: rgba(18, 18, 26, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 3px;
   gap: 2px;
 }
 .exp-type-toggle-btn {
-  padding: 8px 24px;
-  border-radius: 10px;
+  padding: 7px 22px;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   color: #94a3b8;
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition);
@@ -1232,8 +1277,12 @@ tbody td {
     width: 60%;
     height: 1px;
   }
+  .exposure-controls-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
   .exp-control-row {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 }
 

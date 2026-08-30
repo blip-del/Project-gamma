@@ -715,7 +715,7 @@ document.addEventListener('keydown', e => {
 const expState = {
   investment: 1000,
   stockPrice: 100,
-  dte: 60,
+  dte: 63,
   iv: 0.30,
   r: 0.05,
   optionType: 'calls', // 'calls' | 'puts'
@@ -806,13 +806,14 @@ function onExpDteSlider(val) {
 }
 
 function onExpDteInput(val) {
-  const num = parseInt(val, 10);
+  const clean = typeof val === 'string' ? val.replace(/[^0-9]/g, '') : val;
+  const num = parseInt(clean, 10);
   if (isFinite(num) && num > 0) {
     expState.dte = num;
     const slider = document.getElementById('sliderExpDte');
     if (slider) {
-      if (num > parseFloat(slider.max)) slider.max = Math.max(365, num * 1.2).toString();
-      slider.value = num;
+      if (num > parseFloat(slider.max)) slider.max = Math.max(1001, Math.ceil(num / 7) * 7).toString();
+      slider.value = Math.round(num / 7) * 7;
     }
     renderExposureVisualizer();
   }

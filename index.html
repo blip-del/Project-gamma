@@ -353,12 +353,12 @@
             <div class="exp-control-row">
               <label class="exp-control-name" for="expInvestment">Investment ($)</label>
               <div class="exp-slider-wrap">
-                <input type="range" class="slider exp-slider" id="sliderExpInvestment"
-                       min="100" max="25000" step="100" value="1000"
+                <input type="range" class="exp-slider" id="sliderExpInvestment"
+                       min="100" max="10000" step="50" value="1000"
                        oninput="onExpInvestmentSlider(this.value)" />
               </div>
               <div class="exp-value-pill">
-                <input type="number" id="expInvestment" value="1000" min="10" step="100"
+                <input type="number" id="expInvestment" value="1000" min="10" max="100000" step="50"
                        oninput="onExpInvestmentInput(this.value)" />
               </div>
             </div>
@@ -367,12 +367,12 @@
             <div class="exp-control-row">
               <label class="exp-control-name" for="expStockPrice">Stock Price</label>
               <div class="exp-slider-wrap">
-                <input type="range" class="slider exp-slider" id="sliderExpStockPrice"
+                <input type="range" class="exp-slider" id="sliderExpStockPrice"
                        min="10" max="300" step="1" value="100"
                        oninput="onExpStockSlider(this.value)" />
               </div>
               <div class="exp-value-pill">
-                <input type="number" id="expStockPrice" value="100" min="0.01" step="1"
+                <input type="number" id="expStockPrice" value="100" min="1" max="5000" step="1"
                        oninput="onExpStockInput(this.value)" />
               </div>
             </div>
@@ -381,12 +381,12 @@
             <div class="exp-control-row">
               <label class="exp-control-name" for="expDte">DTE</label>
               <div class="exp-slider-wrap">
-                <input type="range" class="slider exp-slider" id="sliderExpDte"
-                       min="1" max="365" step="1" value="60"
+                <input type="range" class="exp-slider" id="sliderExpDte"
+                       min="7" max="1001" step="7" value="63"
                        oninput="onExpDteSlider(this.value)" />
               </div>
               <div class="exp-value-pill">
-                <input type="number" id="expDte" value="60" min="1" max="730" step="1"
+                <input type="number" id="expDte" value="63" min="1" max="1500" step="1"
                        oninput="onExpDteInput(this.value)" />
               </div>
             </div>
@@ -395,7 +395,7 @@
             <div class="exp-control-row">
               <label class="exp-control-name" for="expIv">IV</label>
               <div class="exp-slider-wrap">
-                <input type="range" class="slider exp-slider" id="sliderExpIv"
+                <input type="range" class="exp-slider" id="sliderExpIv"
                        min="0.05" max="2.00" step="0.01" value="0.30"
                        oninput="onExpIvSlider(this.value)" />
               </div>
