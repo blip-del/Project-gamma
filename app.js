@@ -1021,7 +1021,7 @@ function renderExposureVisualizer() {
   }
 
   // Dense evaluation points for smooth chart curves
-  const denseCount = 45;
+  const denseCount = 75;
   const chartStrikes = [];
   for (let i = 0; i < denseCount; i++) {
     const kVal = chartMinK + (i / (denseCount - 1)) * (chartMaxK - chartMinK);
@@ -1151,12 +1151,14 @@ function renderExposureChart(denseData, tableData, axisStrikes, S, minK, maxK) {
   const box = document.getElementById('exposureChartBox');
   if (!box) return;
 
-  const width = 760;
-  const height = 300;
-  const padLeft = 45;
-  const padRight = 30;
-  const padTop = 20;
-  const padBottom = 35;
+  const boxRect = box.getBoundingClientRect();
+  const measuredWidth = boxRect.width || box.clientWidth || 900;
+  const width = Math.max(500, Math.floor(measuredWidth));
+  const height = 330;
+  const padLeft = 46;
+  const padRight = 24;
+  const padTop = 22;
+  const padBottom = 38;
   const plotWidth = width - padLeft - padRight;
   const plotHeight = height - padTop - padBottom;
 
@@ -1219,7 +1221,7 @@ function renderExposureChart(denseData, tableData, axisStrikes, S, minK, maxK) {
 
   // Compose SVG
   box.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" id="svgExposureChart">
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" id="svgExposureChart" style="width: 100%; height: 100%; display: block;">
       <!-- Grid -->
       ${gridLines}
       <!-- ATM Guideline -->
@@ -1245,10 +1247,10 @@ function renderExposureChart(denseData, tableData, axisStrikes, S, minK, maxK) {
   `;
 
   // Attach interactive hover listener
-  attachChartHoverListener(denseData, minK, maxK, plotWidth, plotHeight, padLeft, padTop, yMax);
+  attachChartHoverListener(denseData, minK, maxK, plotWidth, plotHeight, padLeft, padTop, yMax, width, height);
 }
 
-function attachChartHoverListener(denseData, minK, maxK, plotWidth, plotHeight, padLeft, padTop, yMax) {
+function attachChartHoverListener(denseData, minK, maxK, plotWidth, plotHeight, padLeft, padTop, yMax, width, height) {
   const overlay = document.getElementById('chartHoverOverlay');
   const crosshairGroup = document.getElementById('chartCrosshairGroup');
   const crosshairLine = document.getElementById('crosshairLine');
@@ -1256,69 +1258,98 @@ function attachChartHoverListener(denseData, minK, maxK, plotWidth, plotHeight, 
   const dotOmega = document.getElementById('crosshairOmegaDot');
   const tooltip = document.getElementById('chartFloatingTooltip');
   const svg = document.getElementById('svgExposureChart');
+  const box = overlay ? overlay.closest('.chart-svg-box') : null;
 
-  if (!overlay || !svg || !tooltip) return;
+  if (!overlay || !svg || !tooltip || !box) return;
 
   const getYOmega = omegaVal => padTop + plotHeight - (Math.min(omegaVal, yMax) / yMax) * plotHeight;
   const getYDelta = deltaVal => padTop + plotHeight - Math.min(1, Math.max(0, deltaVal)) * plotHeight;
-  const getX = K => padLeft + ((K - minK) / (maxK - minK)) * plotWidth;
 
   const handlePointer = e => {
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const svgX = ((clientX - rect.left) / rect.width) * 760;
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
 
-    if (svgX < padLeft || svgX > padLeft + plotWidth) {
+    let svgX = 0;
+    let svgY = 0;
+    if (svg.getScreenCTM && svg.createSVGPoint) {
+      const pt = svg.createSVGPoint();
+      pt.x = clientX;
+      pt.y = clientY;
+      const ctm = svg.getScreenCTM();
+      if (ctm) {
+        const svgPt = pt.matrixTransform(ctm.inverse());
+        svgX = svgPt.x;
+        svgY = svgPt.y;
+      }
+    }
+    if (!svgX) {
+      const rect = svg.getBoundingClientRect();
+      svgX = ((clientX - rect.left) / rect.width) * width;
+      svgY = ((clientY - rect.top) / rect.height) * height;
+    }
+
+    if (svgX < padLeft - 6 || svgX > padLeft + plotWidth + 6) {
       if (crosshairGroup) crosshairGroup.style.display = 'none';
       if (tooltip) tooltip.style.display = 'none';
       return;
     }
 
-    // Find nearest data point
-    const strikeAtX = minK + ((svgX - padLeft) / plotWidth) * (maxK - minK);
-    let nearest = denseData[0];
-    let minDist = Infinity;
-    for (const d of denseData) {
-      const dist = Math.abs(d.K - strikeAtX);
-      if (dist < minDist) {
-        minDist = dist;
-        nearest = d;
-      }
-    }
+    // Clamp within active plot area
+    const clampedSvgX = Math.max(padLeft, Math.min(padLeft + plotWidth, svgX));
 
-    const nx = getX(nearest.K);
-    const nyDelta = getYDelta(nearest.delta);
-    const nyOmega = getYOmega(nearest.omega);
+    // Exact strike price at this precise horizontal position
+    const strikeAtX = minK + ((clampedSvgX - padLeft) / plotWidth) * (maxK - minK);
+
+    // Compute live real-time metrics at the hovered strike
+    const S = expState.stockPrice;
+    const T = Math.max(1, expState.dte) / 365;
+    const r = expState.r;
+    const iv = expState.iv;
+    const type = expState.optionType;
+    const inv = expState.investment;
+
+    const metrics = getOptionMetrics(S, strikeAtX, T, r, iv, type);
+    const exp = calculateExposureMetrics({
+      investment: inv,
+      stockPrice: S,
+      strike: strikeAtX,
+      optPrice: metrics.price,
+      delta: metrics.delta,
+      optionType: type,
+    });
+
+    const nx = clampedSvgX;
+    const nyDelta = getYDelta(Math.abs(metrics.delta));
+    const nyOmega = getYOmega(Math.max(0, exp.effectiveLeverage));
 
     if (crosshairGroup) crosshairGroup.style.display = '';
     if (crosshairLine) {
-      crosshairLine.setAttribute('x1', nx);
-      crosshairLine.setAttribute('x2', nx);
+      crosshairLine.setAttribute('x1', nx.toFixed(1));
+      crosshairLine.setAttribute('x2', nx.toFixed(1));
     }
     if (dotDelta) {
-      dotDelta.setAttribute('cx', nx);
-      dotDelta.setAttribute('cy', nyDelta);
+      dotDelta.setAttribute('cx', nx.toFixed(1));
+      dotDelta.setAttribute('cy', nyDelta.toFixed(1));
     }
     if (dotOmega) {
-      dotOmega.setAttribute('cx', nx);
-      dotOmega.setAttribute('cy', nyOmega);
+      dotOmega.setAttribute('cx', nx.toFixed(1));
+      dotOmega.setAttribute('cy', nyOmega.toFixed(1));
     }
 
     // Update Tooltip
     tooltip.style.display = 'block';
     tooltip.innerHTML = `
-      <div class="tt-title">Strike: $${fmt(nearest.K, 1)}</div>
-      <div class="tt-row"><span style="color:#60a5fa">Delta (|Δ|):</span> <strong>${fmt(nearest.delta, 2)}</strong></div>
-      <div class="tt-row"><span style="color:#4ade80">Omega (Leverage):</span> <strong>${fmt(nearest.omega, 1)}x</strong></div>
-      <div class="tt-row"><span style="color:#cbd5e1">Option Price:</span> <strong>$${fmt(nearest.price, 2)}</strong></div>
-      <div class="tt-row"><span style="color:#cbd5e1">Notional Exp.:</span> <strong>$${Math.round(nearest.notionalExposure).toLocaleString('en-US')}</strong></div>
+      <div class="tt-title">Strike: $${fmt(strikeAtX, 2)}</div>
+      <div class="tt-row"><span style="color:#60a5fa">Delta (|Δ|):</span> <strong>${fmt(Math.abs(metrics.delta), 2)}</strong></div>
+      <div class="tt-row"><span style="color:#4ade80">Omega (Leverage):</span> <strong>${fmt(exp.effectiveLeverage, 1)}x</strong></div>
+      <div class="tt-row"><span style="color:#cbd5e1">Option Price:</span> <strong>$${fmt(metrics.price, 2)}</strong></div>
+      <div class="tt-row"><span style="color:#cbd5e1">Notional Exp.:</span> <strong>$${Math.round(exp.notionalExposure).toLocaleString('en-US').replace(/,/g, ' ')}</strong></div>
     `;
 
     // Position tooltip relative to container box
-    const boxRect = overlay.closest('.chart-svg-box').getBoundingClientRect();
-    const ttLeft = Math.min(boxRect.width - 170, Math.max(10, clientX - boxRect.left + 15));
-    const ttTop = Math.min(boxRect.height - 110, Math.max(10, clientY - boxRect.top - 20));
+    const bRect = box.getBoundingClientRect();
+    const ttLeft = Math.min(bRect.width - 190, Math.max(10, clientX - bRect.left + 16));
+    const ttTop = Math.min(bRect.height - 130, Math.max(10, clientY - bRect.top - 25));
     tooltip.style.left = `${ttLeft}px`;
     tooltip.style.top = `${ttTop}px`;
   };
@@ -1403,6 +1434,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial render of Exposure Visualizer
   renderExposureVisualizer();
+
+  // Responsive re-rendering when card or container resizes
+  let expResizeTimer;
+  const onContainerResize = () => {
+    clearTimeout(expResizeTimer);
+    expResizeTimer = setTimeout(() => {
+      renderExposureVisualizer();
+    }, 60);
+  };
+  window.addEventListener('resize', onContainerResize);
+
+  const chartBox = document.getElementById('exposureChartBox');
+  if (chartBox && typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(onContainerResize);
+    ro.observe(chartBox);
+  }
 });
 
 // Also trigger immediate render if DOM is already ready
